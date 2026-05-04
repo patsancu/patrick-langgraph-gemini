@@ -1,25 +1,56 @@
+import os
 from langgraph.graph import StateGraph, START, END
 from app.graph.state import AppState
 from app.dependencies import get_ticket_store, get_version_control
 from langchain_core.messages import AIMessage
+from langchain_openai import ChatOpenAI
+from app.graph.llm_schemas import POExtraction, DevLeadExtraction
+
+# Configure LLM (will require OPENAI_API_KEY in environment)
+# Using a fallback to avoid crashing during initialization if key is missing
+def get_llm():
+    return ChatOpenAI(model="gpt-4o", temperature=0)
 
 def po_agent(state: AppState) -> dict:
     store = get_ticket_store()
     print("--- PO Agent: Analyzing Ticket ---")
     
-    # Mock LLM logic: Breaking into 2 use cases
-    uc1_id = store.create_ticket(title="Use Case 1: Core feature", description="Extracted from " + state.get("original_ticket_id", ""), ticket_type="use_case")
-    uc2_id = store.create_ticket(title="Use Case 2: UI setup", description="Extracted from " + state.get("original_ticket_id", ""), ticket_type="use_case")
+    ticket_desc = state.get("original_ticket_desc", "")
     
-    return {"use_case_tickets": [uc1_id, uc2_id], "messages": [AIMessage(content="PO Agent created use cases.")]}
+    if not os.getenv("OPENAI_API_KEY"):
+        print("Warning: OPENAI_API_KEY not set. Using mock PO logic.")
+        uc1_id = store.create_ticket(title="Use Case 1: Core feature", description="Extracted from " + state.get("original_ticket_id", ""), ticket_type="use_case")
+        uc2_id = store.create_ticket(title="Use Case 2: UI setup", description="Extracted from " + state.get("original_ticket_id", ""), ticket_type="use_case")
+        return {"use_case_tickets": [uc1_id, uc2_id], "messages": [AIMessage(content="PO Agent created use cases (mock).")]}
+
+    llm = get_llm().with_structured_output(POExtraction)
+    prompt = f"""
+    You are the Product Owner for a new software project. 
+    Analyze the following user request and break it down into distinct, logical 'Use Cases'.
+    
+    User Request: {ticket_desc}
+    """
+    
+    result = llm.invoke(prompt)
+    use_case_ids = []
+    
+    for uc in result.use_cases:
+        uc_id = store.create_ticket(title=uc.title, description=uc.description, ticket_type="use_case")
+        use_case_ids.append(uc_id)
+        
+    return {"use_case_tickets": use_case_ids, "messages": [AIMessage(content="PO Agent generated use cases via LLM.")]}
 
 def dev_lead_agent(state: AppState) -> dict:
     store = get_ticket_store()
     print("--- Dev Lead Agent: Creating Dev Tasks ---")
     
     dev_tickets = state.get("dev_tickets", [])
-    if not dev_tickets:
-        # Initial task creation
+    if dev_tickets:
+        # Avoid recreating tickets if already populated
+        return {}
+
+    if not os.getenv("OPENAI_API_KEY"):
+        print("Warning: OPENAI_API_KEY not set. Using mock Dev Lead logic.")
         devops_id = store.create_ticket(title="Scaffold App", description="Setup next.js/supabase", ticket_type="devops")
         fe_id = store.create_ticket(title="Implement UI", description="Implement UI for use cases", ticket_type="frontend")
         be_id = store.create_ticket(title="Implement API", description="Implement API for use cases", ticket_type="backend")
@@ -29,8 +60,37 @@ def dev_lead_agent(state: AppState) -> dict:
             {"id": fe_id, "type": "frontend", "status": "TODO"},
             {"id": be_id, "type": "backend", "status": "TODO"}
         ]
-        return {"dev_tickets": dev_tickets, "messages": [AIMessage(content="Dev Lead assigned tasks.")]}
-    return {}
+        return {"dev_tickets": dev_tickets, "messages": [AIMessage(content="Dev Lead assigned tasks (mock).")]}
+
+    # Gather use case details
+    uc_details = []
+    for uc_id in state.get("use_case_tickets", []):
+        ticket = store.get_ticket(uc_id)
+        if ticket:
+            uc_details.append(f"- {ticket['title']}: {ticket['description']}")
+    
+    uc_text = "\n".join(uc_details)
+    
+    llm = get_llm().with_structured_output(DevLeadExtraction)
+    prompt = f"""
+    You are the Dev Team Lead. You must read the following Use Cases and create specific development tasks to implement them.
+    If this is a new feature that needs a full project setup, include a 'devops' task to scaffold the app.
+    Include 'frontend' and 'backend' tasks as necessary to fulfill the requirements.
+    
+    Use Cases:
+    {uc_text}
+    """
+    
+    result = llm.invoke(prompt)
+    new_dev_tickets = []
+    
+    for task in result.tasks:
+        # Validate task type before creating
+        task_type = task.type if task.type in ["frontend", "backend", "devops"] else "backend"
+        task_id = store.create_ticket(title=task.title, description=task.description, ticket_type=task_type)
+        new_dev_tickets.append({"id": task_id, "type": task_type, "status": "TODO"})
+        
+    return {"dev_tickets": new_dev_tickets, "messages": [AIMessage(content="Dev Lead generated dev tasks via LLM.")]}
 
 def devops_agent(state: AppState) -> dict:
     store = get_ticket_store()

@@ -30,6 +30,7 @@ ormsgpack==1.12.2
 packaging==26.2
 pydantic==2.13.3
 pydantic_core==2.46.3
+python-dotenv==1.2.2
 PyYAML==6.0.3
 regex==2026.4.4
 requests==2.33.1

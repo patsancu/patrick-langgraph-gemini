@@ -2,9 +2,12 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uuid
 import sqlite3
+from dotenv import load_dotenv
 from langgraph.checkpoint.sqlite import SqliteSaver
 from app.graph.workflow import builder
 from app.dependencies import get_ticket_store
+
+load_dotenv()
 
 app = FastAPI(title="LangGraph Autonomous Dev Team API")
 
