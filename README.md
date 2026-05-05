@@ -17,18 +17,14 @@ The orchestration ensures tasks are executed in the correct order, handling depe
 
 ### Prerequisites
 - Python 3.10+
+- `uv` package manager
 - `just` command runner (optional, but recommended)
 
 ### Installation
 1. Clone the repository and navigate into it.
-2. Create and activate a virtual environment:
+2. Install the dependencies using `uv`:
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-3. Install the dependencies:
-   ```bash
-   pip install -r requirements.txt
+   uv sync
    ```
 
 ### Configuration
@@ -43,7 +39,7 @@ The orchestration ensures tasks are executed in the correct order, handling depe
 ### Running the App
 Start the development server using Uvicorn (or `just dev`):
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Debugging & Testing

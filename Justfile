@@ -1,12 +1,13 @@
-# Justfile for common project commands
+default:
+    just --list
 
 # Install Python dependencies
 install:
-	pip install -r requirements.txt
+	uv sync
 
 # Run the FastAPI development server
 dev:
-	uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # Test the webhook endpoint with a mock ticket
 test-webhook:
