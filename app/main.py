@@ -12,7 +12,10 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="LangGraph Autonomous Dev Team API")
+app = FastAPI(
+    title="LangGraph Autonomous Dev Team API",
+    openapi_url="/open-api"
+)
 
 # Setup SQLite connection for checkpointer
 conn = sqlite3.connect("langgraph_state.db", check_same_thread=False)
