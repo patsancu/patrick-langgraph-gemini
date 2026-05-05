@@ -6,8 +6,9 @@ install:
 	uv sync
 
 # Run the FastAPI development server
-dev:
-	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Usage: just dev [port]
+dev port="8000":
+	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port {{port}}
 
 # Test the webhook endpoint with a mock ticket
 test-webhook:
