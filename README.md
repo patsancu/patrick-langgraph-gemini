@@ -46,11 +46,21 @@ uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-config log
 ### Debugging & Testing
 You can test the workflow locally using the provided webhook endpoint. If you don't have an `OPENAI_API_KEY`, the agents will use dummy data, allowing you to debug the graph traversal.
 
+**Test the Webhook:**
 Trigger a mock ticket:
 ```bash
 curl -X POST "http://localhost:8000/webhook/ticket" \
      -H "Content-Type: application/json" \
      -d '{"title": "Implement login", "description": "Create a login page"}'
+```
+
+**Test Linear Credentials:**
+If you want to verify that your `LINEAR_API_KEY` and `LINEAR_TEAM_ID` in your `.env` file are correct before running the server, you can run this `curl` command. It will source your `.env` file and hit the Linear GraphQL API to fetch your team name:
+```bash
+set -a; source .env; set +a; curl -X POST https://api.linear.app/graphql \
+  -H "Content-Type: application/json" \
+  -H "Authorization: $LINEAR_API_KEY" \
+  --data '{ "query": "query { team(id: \"'"$LINEAR_TEAM_ID"'\") { id name key } }" }'
 ```
 
 ## Library Justifications
