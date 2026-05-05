@@ -8,7 +8,7 @@ install:
 # Run the FastAPI development server
 # Usage: just dev [port]
 dev port="8000":
-	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port {{port}}
+	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port {{port}} --log-config log_config.yaml
 
 # Test the webhook endpoint with a mock ticket
 test-webhook:

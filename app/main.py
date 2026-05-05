@@ -2,12 +2,15 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uuid
 import sqlite3
+import logging
 from dotenv import load_dotenv
 from langgraph.checkpoint.sqlite import SqliteSaver
 from app.graph.workflow import builder
 from app.dependencies import get_ticket_store
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="LangGraph Autonomous Dev Team API")
 
@@ -54,7 +57,7 @@ def create_ticket(request: TicketRequest):
     try:
         graph.invoke(initial_state, config)
     except Exception as e:
-        print(f"Graph execution paused or error: {e}")
+        logger.error(f"Graph execution paused or error: {e}")
         
     return {"message": "Workflow started", "thread_id": thread_id, "ticket_id": ticket_id}
 
@@ -94,10 +97,10 @@ def provide_human_input(thread_id: str, request: HumanClarificationRequest):
     try:
         graph.invoke(updated_state, config)
     except Exception as e:
-        print(f"Graph execution paused or error: {e}")
+        logger.error(f"Graph execution paused or error: {e}")
         
     return {"message": "Graph resumed"}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True, log_config="log_config.yaml")

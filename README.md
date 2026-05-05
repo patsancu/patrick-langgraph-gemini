@@ -39,7 +39,7 @@ The orchestration ensures tasks are executed in the correct order, handling depe
 ### Running the App
 Start the development server using Uvicorn (or `just dev`):
 ```bash
-uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-config log_config.yaml
 ```
 
 ### Debugging & Testing

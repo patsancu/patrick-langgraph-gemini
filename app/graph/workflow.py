@@ -1,10 +1,13 @@
 import os
+import logging
 from langgraph.graph import StateGraph, START, END
 from app.graph.state import AppState
 from app.dependencies import get_ticket_store, get_version_control
 from langchain_core.messages import AIMessage
 from langchain_openai import ChatOpenAI
 from app.graph.llm_schemas import POExtraction, DevLeadExtraction
+
+logger = logging.getLogger(__name__)
 
 # Configure LLM (will require OPENAI_API_KEY in environment)
 # Using a fallback to avoid crashing during initialization if key is missing
@@ -13,12 +16,12 @@ def get_llm():
 
 def po_agent(state: AppState) -> dict:
     store = get_ticket_store()
-    print("--- PO Agent: Analyzing Ticket ---")
+    logger.info("--- PO Agent: Analyzing Ticket ---")
     
     ticket_desc = state.get("original_ticket_desc", "")
     
     if not os.getenv("OPENAI_API_KEY"):
-        print("Warning: OPENAI_API_KEY not set. Using mock PO logic.")
+        logger.warning("OPENAI_API_KEY not set. Using mock PO logic.")
         uc1_id = store.create_ticket(title="Use Case 1: Core feature", description="Extracted from " + state.get("original_ticket_id", ""), ticket_type="use_case")
         uc2_id = store.create_ticket(title="Use Case 2: UI setup", description="Extracted from " + state.get("original_ticket_id", ""), ticket_type="use_case")
         return {"use_case_tickets": [uc1_id, uc2_id], "messages": [AIMessage(content="PO Agent created use cases (mock).")]}
@@ -42,7 +45,7 @@ def po_agent(state: AppState) -> dict:
 
 def dev_lead_agent(state: AppState) -> dict:
     store = get_ticket_store()
-    print("--- Dev Lead Agent: Creating Dev Tasks ---")
+    logger.info("--- Dev Lead Agent: Creating Dev Tasks ---")
     
     dev_tickets = state.get("dev_tickets", [])
     if dev_tickets:
@@ -50,7 +53,7 @@ def dev_lead_agent(state: AppState) -> dict:
         return {}
 
     if not os.getenv("OPENAI_API_KEY"):
-        print("Warning: OPENAI_API_KEY not set. Using mock Dev Lead logic.")
+        logger.warning("OPENAI_API_KEY not set. Using mock Dev Lead logic.")
         devops_id = store.create_ticket(title="Scaffold App", description="Setup next.js/supabase", ticket_type="devops")
         fe_id = store.create_ticket(title="Implement UI", description="Implement UI for use cases", ticket_type="frontend")
         be_id = store.create_ticket(title="Implement API", description="Implement API for use cases", ticket_type="backend")
@@ -95,7 +98,7 @@ def dev_lead_agent(state: AppState) -> dict:
 def devops_agent(state: AppState) -> dict:
     store = get_ticket_store()
     vc = get_version_control()
-    print("--- DevOps Agent: Scaffolding ---")
+    logger.info("--- DevOps Agent: Scaffolding ---")
     
     dev_tickets = state.get("dev_tickets", [])
     updated_tickets = []
@@ -115,7 +118,7 @@ def devops_agent(state: AppState) -> dict:
 def developer_agent(state: AppState) -> dict:
     store = get_ticket_store()
     vc = get_version_control()
-    print("--- Developer Agent: Coding ---")
+    logger.info("--- Developer Agent: Coding ---")
     
     dev_tickets = state.get("dev_tickets", [])
     updated_tickets = []
@@ -133,14 +136,14 @@ def developer_agent(state: AppState) -> dict:
     return {"dev_tickets": updated_tickets, "messages": [AIMessage(content="Devs completed tasks.")]}
 
 def qa_agent(state: AppState) -> dict:
-    print("--- QA Agent: Reviewing ---")
+    logger.info("--- QA Agent: Reviewing ---")
     vc = get_version_control()
     # Mock QA just merges all open PRs in theory
     # For now, just mark state as completed.
     return {"messages": [AIMessage(content="QA Agent approved and merged PRs.")]}
 
 def human_input(state: AppState) -> dict:
-    print("--- Human Input Required ---")
+    logger.info("--- Human Input Required ---")
     # This node simply acts as an interrupt point. State update happens via API.
     return {"needs_human_input": False}
 

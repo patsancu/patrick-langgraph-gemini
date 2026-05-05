@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ITicketStore(ABC):
     @abstractmethod
@@ -34,15 +37,15 @@ class MockTicketStore(ITicketStore):
             "status": "TODO",
             "comments": []
         }
-        print(f"[MockTicketStore] Created ticket {ticket_id}: {title}")
+        logger.info(f"[MockTicketStore] Created ticket {ticket_id}: {title}")
         return ticket_id
 
     def update_ticket_status(self, ticket_id: str, status: str) -> None:
         if ticket_id in self.tickets:
             self.tickets[ticket_id]["status"] = status
-            print(f"[MockTicketStore] Updated ticket {ticket_id} status to {status}")
+            logger.info(f"[MockTicketStore] Updated ticket {ticket_id} status to {status}")
         else:
-            print(f"[MockTicketStore] Error: Ticket {ticket_id} not found")
+            logger.error(f"[MockTicketStore] Error: Ticket {ticket_id} not found")
 
     def get_ticket(self, ticket_id: str) -> Optional[Dict[str, Any]]:
         return self.tickets.get(ticket_id)
@@ -50,6 +53,6 @@ class MockTicketStore(ITicketStore):
     def add_comment(self, ticket_id: str, comment: str) -> None:
         if ticket_id in self.tickets:
             self.tickets[ticket_id]["comments"].append(comment)
-            print(f"[MockTicketStore] Added comment to {ticket_id}: {comment}")
+            logger.info(f"[MockTicketStore] Added comment to {ticket_id}: {comment}")
         else:
-            print(f"[MockTicketStore] Error: Ticket {ticket_id} not found")
+            logger.error(f"[MockTicketStore] Error: Ticket {ticket_id} not found")
