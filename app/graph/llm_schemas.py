@@ -15,3 +15,10 @@ class DevTask(BaseModel):
 
 class DevLeadExtraction(BaseModel):
     tasks: List[DevTask] = Field(description="A list of technical tasks required to fulfill the use cases")
+
+class FileContent(BaseModel):
+    path: str = Field(description="The relative file path (e.g., 'package.json', 'src/app/page.tsx')")
+    content: str = Field(description="The full content of the file")
+
+class DevOpsExtraction(BaseModel):
+    files: List[FileContent] = Field(description="A list of files to be scaffolded or modified")

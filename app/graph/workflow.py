@@ -97,8 +97,38 @@ def devops_agent(state: AppState) -> dict:
     
     for t in dev_tickets:
         if t["type"] == "devops" and t["status"] == "TODO":
+            files_to_commit = {"package.json": "{}"} # fallback
+            
+            if is_llm_configured():
+                # Read task details
+                ticket = store.get_ticket(t['id'])
+                task_desc = ticket.get("description", "") if ticket else ""
+                
+                llm = get_llm().with_structured_output(DevOpsExtraction)
+                messages = [
+                    ("system", DEVOPS_AGENT_PROMPT),
+                    ("human", f"Task Description:\n{task_desc}")
+                ]
+                
+                try:
+                    result = llm.invoke(messages)
+                    if result and result.files:
+                        files_to_commit = {f.path: f.content for f in result.files}
+                except Exception as e:
+                    logger.error(f"DevOps Agent LLM generation failed: {e}")
+                    # Keep fallback empty package.json
+            else:
+                logger.warning("LLM provider not configured. Using mock DevOps logic.")
+                files_to_commit = {
+                    "package.json": '{\n  "name": "mock-app",\n  "dependencies": {\n    "next": "latest",\n    "react": "latest",\n    "react-dom": "latest",\n    "@supabase/supabase-js": "latest"\n  }\n}',
+                    "next.config.js": "module.exports = {};",
+                    "tailwind.config.ts": "module.exports = { content: ['./src/**/*.{js,ts,jsx,tsx}'] };",
+                    "src/app/page.tsx": "export default function Home() { return <div>Mock App</div>; }",
+                    "src/lib/supabase.ts": "import { createClient } from '@supabase/supabase-js';\nexport const supabase = createClient('mock_url', 'mock_key');"
+                }
+
             branch = vc.create_branch(f"devops-{t['id']}")
-            vc.commit_code(branch, "Initial scaffold", {"package.json": "{}"})
+            vc.commit_code(branch, "Initial scaffold", files_to_commit)
             pr = vc.create_pull_request("Scaffold PR", "Added scaffold", branch)
             store.update_ticket_status(t['id'], "DONE")
             t["status"] = "DONE"
