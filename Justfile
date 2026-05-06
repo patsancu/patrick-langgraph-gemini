@@ -10,6 +10,10 @@ install:
 dev port="8000":
 	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port {{port}} --log-config log_config.yaml
 
+# Run unit tests and generate coverage report
+test:
+	uv run pytest --cov=app tests/
+
 # Test the webhook endpoint with a mock ticket
 test-webhook:
 	curl -X POST "http://localhost:8000/webhook/ticket" \

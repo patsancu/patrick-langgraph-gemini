@@ -72,7 +72,7 @@ def get_status(thread_id: str):
     except Exception as e:
         raise HTTPException(status_code=404, detail="Thread not found")
         
-    if not state_snapshot:
+    if not state_snapshot or not state_snapshot.values:
         raise HTTPException(status_code=404, detail="Thread not found")
         
     next_node = state_snapshot.next

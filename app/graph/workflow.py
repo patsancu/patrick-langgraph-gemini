@@ -180,8 +180,3 @@ builder.add_edge("qa_agent", END)
 
 # Add interrupt before human input
 # We'll configure checkpointer and memory in the main application instance
-lder.add_conditional_edges("developer_agent", route_after_devs)
-builder.add_edge("qa_agent", END)
-
-# Add interrupt before human input
-# We'll configure checkpointer and memory in the main application instance
