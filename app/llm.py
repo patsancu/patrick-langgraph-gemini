@@ -12,6 +12,8 @@ def is_llm_configured() -> bool:
         return bool(os.getenv("OPENAI_API_KEY"))
     elif provider == "anthropic":
         return bool(os.getenv("ANTHROPIC_API_KEY"))
+    elif provider == "github":
+        return bool(os.getenv("GITHUB_TOKEN"))
         
     return False
 
@@ -37,6 +39,21 @@ def get_llm() -> BaseChatModel:
             logger.warning("ANTHROPIC_API_KEY not set for Anthropic provider.")
             
         return ChatAnthropic(model=model, temperature=temperature)
+        
+    elif provider == "github":
+        model = os.getenv("LLM_MODEL", "gpt-4o")
+        from langchain_openai import ChatOpenAI
+        
+        if not os.getenv("GITHUB_TOKEN"):
+            logger.warning("GITHUB_TOKEN not set for GitHub provider.")
+            
+        # GitHub Models API acts as an OpenAI-compatible endpoint
+        return ChatOpenAI(
+            api_key=os.getenv("GITHUB_TOKEN", ""),
+            base_url="https://models.inference.ai.azure.com",
+            model=model,
+            temperature=temperature
+        )
         
     else:
         logger.error(f"Unknown LLM_PROVIDER '{provider}'. Falling back to OpenAI.")

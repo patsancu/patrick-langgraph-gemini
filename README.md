@@ -33,8 +33,8 @@ The orchestration ensures tasks are executed in the correct order, handling depe
    cp .env.example .env
    ```
 2. Configure your environment variables in `.env`:
-   - `LLM_PROVIDER`: Set to `openai` (default) or `anthropic`.
-   - `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`: Required depending on your chosen provider. If omitted, the application will safely fallback to mock PO and Dev Lead behavior for testing the orchestration graph.
+   - `LLM_PROVIDER`: Set to `openai` (default), `anthropic`, or `github`.
+   - `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GITHUB_TOKEN`: Required depending on your chosen provider. If omitted, the application will safely fallback to mock PO and Dev Lead behavior for testing the orchestration graph.
    - `LINEAR_API_KEY` & `LINEAR_TEAM_ID` (Optional): If both are provided, the workflow will create and update real tickets in your Linear workspace instead of using mock logs.
    - *Supabase configuration*: Note that while this backend does not directly connect to Supabase, the DevOps agent scaffolds frontend projects that require Supabase. Thus, your scaffolded frontend applications will need their own Supabase environment variables configured.
 
