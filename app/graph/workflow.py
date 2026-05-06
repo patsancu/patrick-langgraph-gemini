@@ -21,15 +21,17 @@ def po_agent(state: AppState) -> dict:
         uc2_id = store.create_ticket(title="Use Case 2: UI setup", description="Extracted from " + state.get("original_ticket_id", ""), ticket_type="use_case")
         return {"use_case_tickets": [uc1_id, uc2_id], "messages": [AIMessage(content="PO Agent created use cases (mock).")]}
 
-    llm = get_llm().with_structured_output(POExtraction)
-    prompt = f"""
-    You are the Product Owner for a new software project. 
-    Analyze the following user request and break it down into distinct, logical 'Use Cases'.
-    
-    User Request: {ticket_desc}
-    """
-    
-    result = llm.invoke(prompt)
+    llm = get_llm().with_structured_output(DevLeadExtraction)
+    prompt_path = os.path.join(os.path.dirname(__file__), "..", "config", "prompts", "dev_lead_agent.txt")
+    with open(prompt_path, "r") as f:
+        system_prompt = f.read().strip()
+
+    messages = [
+        ("system", system_prompt),
+        ("human", f"Use Cases:\n{uc_text}")
+    ]
+
+    result = llm.invoke(messages)
     use_case_ids = []
     
     for uc in result.use_cases:
@@ -70,16 +72,16 @@ def dev_lead_agent(state: AppState) -> dict:
     uc_text = "\n".join(uc_details)
     
     llm = get_llm().with_structured_output(DevLeadExtraction)
-    prompt = f"""
-    You are the Dev Team Lead. You must read the following Use Cases and create specific development tasks to implement them.
-    If this is a new feature that needs a full project setup, include a 'devops' task to scaffold the app.
-    Include 'frontend' and 'backend' tasks as necessary to fulfill the requirements.
+    prompt_path = os.path.join(os.path.dirname(__file__), "..", "config", "prompts", "dev_lead_agent.txt")
+    with open(prompt_path, "r") as f:
+        system_prompt = f.read().strip()
+        
+    messages = [
+        ("system", system_prompt),
+        ("human", f"Use Cases:\n{uc_text}")
+    ]
     
-    Use Cases:
-    {uc_text}
-    """
-    
-    result = llm.invoke(prompt)
+    result = llm.invoke(messages)
     new_dev_tickets = []
     
     for task in result.tasks:
