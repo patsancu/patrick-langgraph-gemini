@@ -47,8 +47,8 @@ def dev_lead_agent(state: AppState) -> dict:
         # Avoid recreating tickets if already populated
         return {}
 
-    if not os.getenv("OPENAI_API_KEY"):
-        logger.warning("OPENAI_API_KEY not set. Using mock Dev Lead logic.")
+    if not is_llm_configured():
+        logger.warning("LLM provider not configured. Using mock Dev Lead logic.")
         devops_id = store.create_ticket(title="Scaffold App", description="Setup next.js/supabase", ticket_type="devops")
         fe_id = store.create_ticket(title="Implement UI", description="Implement UI for use cases", ticket_type="frontend")
         be_id = store.create_ticket(title="Implement API", description="Implement API for use cases", ticket_type="backend")
