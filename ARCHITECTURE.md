@@ -46,3 +46,19 @@ In adherence to the global project rules, whenever the **DevOps Agent** scaffold
 
 ## Frontend and Backend (Supabase) Interaction
 While this LangGraph API does not connect to Supabase directly, it acts as the orchestrator that *builds* systems that do. The DevOps agent scaffolds the Next.js frontend with Supabase SDKs, setting up fallback static mock data if the Supabase environment variables are missing, ensuring the scaffolded app is always locally runnable for UI/UX review.
+
+## Testing Strategy
+
+The application maintains a comprehensive test suite (with over 80% coverage) using `pytest`. The testing architecture is divided into two primary categories:
+
+### 1. Unit Tests (`tests/test_main.py`, `test_llm.py`, `test_interfaces.py`, `test_linear.py`, `test_workflow.py`)
+**Purpose:** To isolate and verify the individual components of the system without relying on external services.
+- **FastAPI Endpoints (`test_main.py`):** Uses FastAPI's `TestClient` to ensure the API routes correctly handle valid requests (returning `200 OK`) and accurately catch missing resources or invalid operations (returning `404 Not Found` or `400 Bad Request`).
+- **Interfaces & LLM (`test_linear.py`, `test_llm.py`):** Validates that our abstraction layers work correctly. The Linear API tests, for example, mock the `requests.post` network calls to verify our GraphQL payload parsing without hitting the real internet.
+- **Workflow Logic (`test_workflow.py`):** Tests the internal routing logic and state mutations of individual LangGraph agent nodes independently.
+
+### 2. Integration Tests (`tests/test_integration.py`)
+**Purpose:** To verify that the entire orchestration system—from the web framework down to the LangGraph execution—works together seamlessly.
+- **How it works:** It uses `unittest.mock.patch` to override environment variables (setting `LLM_PROVIDER` to `unknown` and clearing API keys). This explicitly triggers the "mock logic" branches inside our agents.
+- **Execution:** It then uses `TestClient` to submit a webhook payload. Because the graph executes synchronously with mocked agents, the test naturally waits for the entire workflow (PO -> Dev Lead -> DevOps -> Devs -> QA) to complete.
+- **Validation:** Finally, it queries the status endpoint to verify that the graph reached its `END` node and that the shared state contains all the expected tickets and PRs generated during the traversal. This proves the system's "happy path" functions correctly from end to end without incurring LLM API costs or creating junk data in Linear.
