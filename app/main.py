@@ -69,7 +69,7 @@ def get_status(thread_id: str):
     config = {"configurable": {"thread_id": thread_id}}
     try:
         state_snapshot = graph.get_state(config)
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=404, detail="Thread not found")
         
     if not state_snapshot or not state_snapshot.values:

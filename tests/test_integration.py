@@ -24,7 +24,6 @@ def test_full_workflow_integration():
         assert data["message"] == "Workflow started"
         
         thread_id = data["thread_id"]
-        original_ticket_id = data["ticket_id"]
         
         # 2. Check the status after the synchronous graph execution
         # Because we're not hitting real APIs, the mock logic runs instantly and the graph

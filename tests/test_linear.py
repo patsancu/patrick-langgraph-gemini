@@ -1,4 +1,3 @@
-import json
 from unittest.mock import patch, MagicMock
 from app.interfaces.linear_ticket_store import LinearTicketStore
 
@@ -18,7 +17,7 @@ def test_linear_create_ticket():
         }
     }
 
-    with patch("requests.post", return_value=mock_response) as mock_post:
+    with patch("requests.post", return_value=mock_response):
         issue_id = store.create_ticket("Title", "Desc")
         assert issue_id == "uuid-1"
 

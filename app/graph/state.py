@@ -1,5 +1,5 @@
 import operator
-from typing import Annotated, List, TypedDict, Any
+from typing import Annotated, List, TypedDict
 from langchain_core.messages import BaseMessage
 
 class AppState(TypedDict):

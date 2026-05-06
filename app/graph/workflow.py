@@ -1,12 +1,11 @@
-import os
 import logging
 from langgraph.graph import StateGraph, START, END
 from app.graph.state import AppState
 from app.dependencies import get_ticket_store, get_version_control
 from langchain_core.messages import AIMessage
-from app.graph.llm_schemas import POExtraction, DevLeadExtraction
+from app.graph.llm_schemas import POExtraction, DevLeadExtraction, DevOpsExtraction
 from app.llm import get_llm, is_llm_configured
-from app.config.prompts import PO_AGENT_PROMPT, DEV_LEAD_AGENT_PROMPT
+from app.config.prompts import PO_AGENT_PROMPT, DEV_LEAD_AGENT_PROMPT, DEVOPS_AGENT_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +158,6 @@ def developer_agent(state: AppState) -> dict:
 
 def qa_agent(state: AppState) -> dict:
     logger.info("--- QA Agent: Reviewing ---")
-    vc = get_version_control()
     # Mock QA just merges all open PRs in theory
     # For now, just mark state as completed.
     return {"messages": [AIMessage(content="QA Agent approved and merged PRs.")]}

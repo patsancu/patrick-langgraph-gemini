@@ -14,6 +14,10 @@ dev port="8000":
 test:
 	uv run pytest --cov=app tests/
 
+# Run static analysis and linting
+lint:
+	uv run ruff check .
+
 # Test the webhook endpoint with a mock ticket
 test-webhook:
 	curl -X POST "http://localhost:8000/webhook/ticket" \
