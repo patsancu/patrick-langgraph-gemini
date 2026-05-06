@@ -4,24 +4,19 @@ from langgraph.graph import StateGraph, START, END
 from app.graph.state import AppState
 from app.dependencies import get_ticket_store, get_version_control
 from langchain_core.messages import AIMessage
-from langchain_openai import ChatOpenAI
 from app.graph.llm_schemas import POExtraction, DevLeadExtraction
+from app.llm import get_llm, is_llm_configured
 
 logger = logging.getLogger(__name__)
-
-# Configure LLM (will require OPENAI_API_KEY in environment)
-# Using a fallback to avoid crashing during initialization if key is missing
-def get_llm():
-    return ChatOpenAI(model="gpt-4o", temperature=0)
 
 def po_agent(state: AppState) -> dict:
     store = get_ticket_store()
     logger.info("--- PO Agent: Analyzing Ticket ---")
-    
+
     ticket_desc = state.get("original_ticket_desc", "")
-    
-    if not os.getenv("OPENAI_API_KEY"):
-        logger.warning("OPENAI_API_KEY not set. Using mock PO logic.")
+
+    if not is_llm_configured():
+        logger.warning("LLM provider not configured. Using mock PO logic.")
         uc1_id = store.create_ticket(title="Use Case 1: Core feature", description="Extracted from " + state.get("original_ticket_id", ""), ticket_type="use_case")
         uc2_id = store.create_ticket(title="Use Case 2: UI setup", description="Extracted from " + state.get("original_ticket_id", ""), ticket_type="use_case")
         return {"use_case_tickets": [uc1_id, uc2_id], "messages": [AIMessage(content="PO Agent created use cases (mock).")]}
@@ -181,6 +176,11 @@ builder.add_conditional_edges("dev_lead_agent", route_after_dev_lead)
 builder.add_edge("devops_agent", "dev_lead_agent") 
 
 builder.add_conditional_edges("developer_agent", route_after_devs)
+builder.add_edge("qa_agent", END)
+
+# Add interrupt before human input
+# We'll configure checkpointer and memory in the main application instance
+lder.add_conditional_edges("developer_agent", route_after_devs)
 builder.add_edge("qa_agent", END)
 
 # Add interrupt before human input
