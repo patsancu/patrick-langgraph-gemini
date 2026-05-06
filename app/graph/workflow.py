@@ -6,6 +6,7 @@ from app.dependencies import get_ticket_store, get_version_control
 from langchain_core.messages import AIMessage
 from app.graph.llm_schemas import POExtraction, DevLeadExtraction
 from app.llm import get_llm, is_llm_configured
+from app.config.prompts import PO_AGENT_PROMPT, DEV_LEAD_AGENT_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -21,14 +22,11 @@ def po_agent(state: AppState) -> dict:
         uc2_id = store.create_ticket(title="Use Case 2: UI setup", description="Extracted from " + state.get("original_ticket_id", ""), ticket_type="use_case")
         return {"use_case_tickets": [uc1_id, uc2_id], "messages": [AIMessage(content="PO Agent created use cases (mock).")]}
 
-    llm = get_llm().with_structured_output(DevLeadExtraction)
-    prompt_path = os.path.join(os.path.dirname(__file__), "..", "config", "prompts", "dev_lead_agent.txt")
-    with open(prompt_path, "r") as f:
-        system_prompt = f.read().strip()
+    llm = get_llm().with_structured_output(POExtraction)
 
     messages = [
-        ("system", system_prompt),
-        ("human", f"Use Cases:\n{uc_text}")
+        ("system", PO_AGENT_PROMPT),
+        ("human", f"User Request: {ticket_desc}")
     ]
 
     result = llm.invoke(messages)
@@ -72,12 +70,9 @@ def dev_lead_agent(state: AppState) -> dict:
     uc_text = "\n".join(uc_details)
     
     llm = get_llm().with_structured_output(DevLeadExtraction)
-    prompt_path = os.path.join(os.path.dirname(__file__), "..", "config", "prompts", "dev_lead_agent.txt")
-    with open(prompt_path, "r") as f:
-        system_prompt = f.read().strip()
         
     messages = [
-        ("system", system_prompt),
+        ("system", DEV_LEAD_AGENT_PROMPT),
         ("human", f"Use Cases:\n{uc_text}")
     ]
     
