@@ -3,7 +3,7 @@ from langgraph.graph import StateGraph, START, END
 from app.graph.state import AppState
 from app.dependencies import get_ticket_store, get_version_control
 from langchain_core.messages import AIMessage
-from app.graph.llm_schemas import POExtraction, DevLeadExtraction, DevOpsExtraction
+from app.graph.llm_schemas import POExtraction, DevLeadExtraction
 from app.llm import get_llm, is_llm_configured
 from app.config.prompts import PO_AGENT_PROMPT, DEV_LEAD_AGENT_PROMPT, DEVOPS_AGENT_PROMPT
 
@@ -96,26 +96,33 @@ def devops_agent(state: AppState) -> dict:
     
     for t in dev_tickets:
         if t["type"] == "devops" and t["status"] == "TODO":
-            files_to_commit = {"package.json": "{}"} # fallback
-            
             if is_llm_configured():
                 # Read task details
                 ticket = store.get_ticket(t['id'])
                 task_desc = ticket.get("description", "") if ticket else ""
                 
-                llm = get_llm().with_structured_output(DevOpsExtraction)
-                messages = [
-                    ("system", DEVOPS_AGENT_PROMPT),
-                    ("human", f"Task Description:\n{task_desc}")
+                from langgraph.prebuilt import create_react_agent
+                from app.tools.file_system import get_file_tools
+                from app.tools.github import create_branch_tool, commit_code_tool, create_pr_tool
+                
+                llm = get_llm()
+                # Create tools isolated to this agent
+                tools = get_file_tools("/tmp/workspace", restrict_destructive=False) + [
+                    create_branch_tool, commit_code_tool, create_pr_tool
                 ]
                 
+                # Create the subgraph
+                agent = create_react_agent(llm, tools=tools, state_modifier=DEVOPS_AGENT_PROMPT)
+                
                 try:
-                    result = llm.invoke(messages)
-                    if result and result.files:
-                        files_to_commit = {f.path: f.content for f in result.files}
+                    logger.info("Executing DevOps Subgraph...")
+                    agent.invoke({"messages": [("human", f"Execute this task: {t['id']}\n\nTask Description:\n{task_desc}")]})
+                    # Agent completes loop. Update ticket.
+                    store.update_ticket_status(t['id'], "DONE")
+                    t["status"] = "DONE"
+                    store.add_comment(t['id'], "DevOps Agent completed its task via Subgraph.")
                 except Exception as e:
-                    logger.error(f"DevOps Agent LLM generation failed: {e}")
-                    # Keep fallback empty package.json
+                    logger.error(f"DevOps Agent Subgraph failed: {e}")
             else:
                 logger.warning("LLM provider not configured. Using mock DevOps logic.")
                 files_to_commit = {
@@ -126,12 +133,12 @@ def devops_agent(state: AppState) -> dict:
                     "src/lib/supabase.ts": "import { createClient } from '@supabase/supabase-js';\nexport const supabase = createClient('mock_url', 'mock_key');"
                 }
 
-            branch = vc.create_branch(f"devops-{t['id']}")
-            vc.commit_code(branch, "Initial scaffold", files_to_commit)
-            pr = vc.create_pull_request("Scaffold PR", "Added scaffold", branch)
-            store.update_ticket_status(t['id'], "DONE")
-            t["status"] = "DONE"
-            store.add_comment(t['id'], f"PR created: {pr}")
+                branch = vc.create_branch(f"devops-{t['id']}")
+                vc.commit_code(branch, "Initial scaffold", files_to_commit)
+                pr = vc.create_pull_request("Scaffold PR", "Added scaffold", branch)
+                store.update_ticket_status(t['id'], "DONE")
+                t["status"] = "DONE"
+                store.add_comment(t['id'], f"PR created: {pr}")
         updated_tickets.append(t)
         
     return {"dev_tickets": updated_tickets, "messages": [AIMessage(content="DevOps completed scaffolding.")]}
@@ -146,12 +153,40 @@ def developer_agent(state: AppState) -> dict:
     
     for t in dev_tickets:
         if t["type"] in ["frontend", "backend"] and t["status"] == "TODO":
-            branch = vc.create_branch(f"dev-{t['id']}")
-            vc.commit_code(branch, "Implemented feature", {"code.ts": "// code"})
-            pr = vc.create_pull_request(f"{t['type']} feature PR", "Implemented code", branch)
-            store.update_ticket_status(t['id'], "DONE")
-            t["status"] = "DONE"
-            store.add_comment(t['id'], f"PR created: {pr}")
+            if is_llm_configured():
+                ticket = store.get_ticket(t['id'])
+                task_desc = ticket.get("description", "") if ticket else ""
+                
+                from langgraph.prebuilt import create_react_agent
+                from app.tools.file_system import get_file_tools
+                from app.tools.github import create_branch_tool, commit_code_tool, create_pr_tool
+                from app.config.prompts import DEVELOPER_AGENT_PROMPT
+                
+                llm = get_llm()
+                # Create tools isolated to this agent (restrict destructive actions)
+                tools = get_file_tools("/tmp/workspace", restrict_destructive=True) + [
+                    create_branch_tool, commit_code_tool, create_pr_tool
+                ]
+                
+                agent = create_react_agent(llm, tools=tools, state_modifier=DEVELOPER_AGENT_PROMPT)
+                
+                try:
+                    logger.info(f"Executing Developer Subgraph for {t['type']}...")
+                    agent.invoke({"messages": [("human", f"Execute this {t['type']} task: {t['id']}\n\nTask Description:\n{task_desc}")]})
+                    
+                    store.update_ticket_status(t['id'], "DONE")
+                    t["status"] = "DONE"
+                    store.add_comment(t['id'], "Developer Agent completed its task via Subgraph.")
+                except Exception as e:
+                    logger.error(f"Developer Agent Subgraph failed: {e}")
+            else:
+                logger.warning("LLM provider not configured. Using mock Developer logic.")
+                branch = vc.create_branch(f"dev-{t['id']}")
+                vc.commit_code(branch, "Implemented feature", {"code.ts": "// code"})
+                pr = vc.create_pull_request(f"{t['type']} feature PR", "Implemented code", branch)
+                store.update_ticket_status(t['id'], "DONE")
+                t["status"] = "DONE"
+                store.add_comment(t['id'], f"PR created: {pr}")
         updated_tickets.append(t)
         
     return {"dev_tickets": updated_tickets, "messages": [AIMessage(content="Devs completed tasks.")]}
