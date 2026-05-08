@@ -57,7 +57,7 @@ def dev_lead_agent(state: AppState) -> dict:
             {"id": fe_id, "type": "frontend", "status": "TODO"},
             {"id": be_id, "type": "backend", "status": "TODO"}
         ]
-        return {"dev_tickets": dev_tickets, "messages": [AIMessage(content="Dev Lead assigned tasks (mock).")]}
+        return {"dev_tickets": dev_tickets, "messages": [AIMessage(content=f"Dev Lead assigned tasks (mock): {devops_id}, {fe_id}, {be_id}")]}
 
     # Gather use case details
     uc_details = []
@@ -77,14 +77,16 @@ def dev_lead_agent(state: AppState) -> dict:
     
     result = llm.invoke(messages)
     new_dev_tickets = []
+    created_task_ids = []
     
     for task in result.tasks:
         # Validate task type before creating
         task_type = task.type if task.type in ["frontend", "backend", "devops"] else "backend"
         task_id = store.create_ticket(title=task.title, description=task.description, ticket_type=task_type)
         new_dev_tickets.append({"id": task_id, "type": task_type, "status": "TODO"})
+        created_task_ids.append(task_id)
         
-    return {"dev_tickets": new_dev_tickets, "messages": [AIMessage(content="Dev Lead generated dev tasks via LLM.")]}
+    return {"dev_tickets": new_dev_tickets, "messages": [AIMessage(content=f"Dev Lead generated dev tasks via LLM: {', '.join(created_task_ids)}")]}
 
 def devops_agent(state: AppState) -> dict:
     store = get_ticket_store()
@@ -112,7 +114,7 @@ def devops_agent(state: AppState) -> dict:
                 ]
                 
                 # Create the subgraph
-                agent = create_react_agent(llm, tools=tools, state_modifier=DEVOPS_AGENT_PROMPT)
+                agent = create_react_agent(llm, tools=tools, prompt=DEVOPS_AGENT_PROMPT)
                 
                 try:
                     logger.info("Executing DevOps Subgraph...")
@@ -168,7 +170,7 @@ def developer_agent(state: AppState) -> dict:
                     create_branch_tool, commit_code_tool, create_pr_tool
                 ]
                 
-                agent = create_react_agent(llm, tools=tools, state_modifier=DEVELOPER_AGENT_PROMPT)
+                agent = create_react_agent(llm, tools=tools, prompt=DEVELOPER_AGENT_PROMPT)
                 
                 try:
                     logger.info(f"Executing Developer Subgraph for {t['type']}...")
