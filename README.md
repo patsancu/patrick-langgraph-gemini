@@ -73,7 +73,12 @@ The following external libraries are used in this project:
 - `uvicorn` -> For serving the FastAPI application locally and in production, see module `app/main.py`.
 - `langgraph` -> For stateful, multi-agent orchestration and workflow management, see module `app/graph/workflow.py`.
 - `langchain` -> For managing LLM prompts and core AI interactions, see module `app/graph/workflow.py`.
-- `langchain-openai` -> For integrating OpenAI's GPT models into the agents, see module `app/graph/workflow.py`.
+- `langchain-openai` -> For integrating OpenAI and GitHub Copilot API models into the agents, see module `app/llm.py`.
+- `langchain-anthropic` -> For integrating Anthropic's Claude models into the agents, see module `app/llm.py`.
+- `langchain-community` -> For utilizing the FileManagementToolkit to allow agents to securely manipulate files, see module `app/tools/file_system.py`.
+- `PyGithub` -> For authenticating and interacting with the GitHub API to dynamically push code and create PRs, see module `app/interfaces/github_version_control.py`.
 - `pydantic` -> For data validation, request parsing, and LLM structured output schemas, see module `app/graph/llm_schemas.py`.
 - `python-dotenv` -> For securely loading environment variables like API keys from a `.env` file, see module `app/main.py`.
 - `langgraph-checkpoint-sqlite` -> For persisting LangGraph state to an SQLite database, enabling human-in-the-loop pauses, see module `app/main.py`.
+- `pytest` (and plugins) -> For writing and executing the unit and integration test suite, see `tests/`.
+- `ruff` -> For static analysis and linting to maintain code quality, see `Justfile`.
