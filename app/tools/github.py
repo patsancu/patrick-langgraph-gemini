@@ -20,11 +20,18 @@ class CommitCodeInput(BaseModel):
 def commit_code_tool(branch_name: str, message: str, files_changed: list[str]) -> str:
     """Commit the modified files to the branch."""
     vc = get_version_control()
-    # In a real system, this would 'git add' the files in the workspace.
-    # For our mock interface, we map the list back to a dummy dict.
-    files_dict = {f: "content_on_disk" for f in files_changed}
+    
+    files_dict = {}
+    import os
+    workspace = "/tmp/workspace"
+    for f in files_changed:
+        file_path = os.path.join(workspace, f)
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as file_obj:
+                files_dict[f] = file_obj.read()
+                
     vc.commit_code(branch_name, message, files_dict)
-    return f"Committed {len(files_changed)} files to {branch_name}"
+    return f"Committed {len(files_dict)} files to {branch_name}"
 
 class CreatePRInput(BaseModel):
     title: str = Field(description="The title of the pull request")
