@@ -36,7 +36,7 @@ The orchestration ensures tasks are executed in the correct order, handling depe
    - `LLM_PROVIDER`: Set to `openai` (default), `anthropic`, or `github`.
    - `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GITHUB_TOKEN`: Required depending on your chosen provider. If omitted, the application will safely fallback to mock PO and Dev Lead behavior for testing the orchestration graph.
    - `GITHUB_REPO` (Optional): If provided along with `GITHUB_TOKEN`, the agents will physically push code and open Pull Requests against the specified repository (e.g., `owner/repo_name`) instead of mocking it.
-   - `LINEAR_API_KEY` & `LINEAR_TEAM_ID` (Optional): If both are provided, the workflow will create and update real tickets in your Linear workspace instead of using mock logs.
+   - `LINEAR_API_KEY` & `LINEAR_TEAM_ID` (Optional): If both are provided, the workflow will create and update real tickets in your Linear workspace instead of using mock logs. To get the team id: `curl -H "Authorization: $OPERATOR_LINEAR_API_KEY" -H "Content-Type: application/json" https://api.linear.app/graphql -d '{"query": "{ teams { nodes { id name } } }"}'`
    - *Supabase configuration*: Note that while this backend does not directly connect to Supabase, the DevOps agent scaffolds frontend projects that require Supabase. Thus, your scaffolded frontend applications will need their own Supabase environment variables configured.
 
 ### Running the App
@@ -75,6 +75,7 @@ The following external libraries are used in this project:
 - `langchain` -> For managing LLM prompts and core AI interactions, see module `app/graph/workflow.py`.
 - `langchain-openai` -> For integrating OpenAI and GitHub Copilot API models into the agents, see module `app/llm.py`.
 - `langchain-anthropic` -> For integrating Anthropic's Claude models into the agents, see module `app/llm.py`.
+- `langchain-ollama` -> For integrating local Ollama models into the agents, see module `app/llm.py`.
 - `langchain-community` -> For utilizing the FileManagementToolkit to allow agents to securely manipulate files, see module `app/tools/file_system.py`.
 - `PyGithub` -> For authenticating and interacting with the GitHub API to dynamically push code and create PRs, see module `app/interfaces/github_version_control.py`.
 - `pydantic` -> For data validation, request parsing, and LLM structured output schemas, see module `app/graph/llm_schemas.py`.
@@ -82,3 +83,4 @@ The following external libraries are used in this project:
 - `langgraph-checkpoint-sqlite` -> For persisting LangGraph state to an SQLite database, enabling human-in-the-loop pauses, see module `app/main.py`.
 - `pytest` (and plugins) -> For writing and executing the unit and integration test suite, see `tests/`.
 - `ruff` -> For static analysis and linting to maintain code quality, see `Justfile`.
+ic analysis and linting to maintain code quality, see `Justfile`.

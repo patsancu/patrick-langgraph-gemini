@@ -14,6 +14,9 @@ def is_llm_configured() -> bool:
         return bool(os.getenv("ANTHROPIC_API_KEY"))
     elif provider == "github":
         return bool(os.getenv("GITHUB_TOKEN"))
+    elif provider == "ollama":
+        # Ollama runs locally and doesn't require an API key by default
+        return True
 
     return False
 
@@ -52,6 +55,17 @@ def get_llm() -> BaseChatModel:
             api_key=os.getenv("GITHUB_TOKEN", ""),
             base_url="https://models.inference.ai.azure.com",
             model=model,
+            temperature=temperature
+        )
+
+    elif provider == "ollama":
+        model = os.getenv("LLM_MODEL", "llama3")
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        from langchain_ollama import ChatOllama
+        
+        return ChatOllama(
+            model=model,
+            base_url=base_url,
             temperature=temperature
         )
 

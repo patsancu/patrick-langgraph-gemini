@@ -23,24 +23,26 @@ def test_dev_lead_agent_mock():
         assert res2 == {}
 
 def test_devops_agent():
-    state = {"dev_tickets": [
-        {"id": "TICK-1", "type": "devops", "status": "TODO"},
-        {"id": "TICK-2", "type": "frontend", "status": "TODO"}
-    ]}
-    res = devops_agent(state)
-    assert res["dev_tickets"][0]["status"] == "DONE"
-    assert res["dev_tickets"][1]["status"] == "TODO"
+    with patch.dict(os.environ, {"LLM_PROVIDER": "unknown"}, clear=True):
+        state = {"dev_tickets": [
+            {"id": "TICK-1", "type": "devops", "status": "TODO"},
+            {"id": "TICK-2", "type": "frontend", "status": "TODO"}
+        ]}
+        res = devops_agent(state)
+        assert res["dev_tickets"][0]["status"] == "DONE"
+        assert res["dev_tickets"][1]["status"] == "TODO"
 
 def test_developer_agent():
-    state = {"dev_tickets": [
-        {"id": "TICK-1", "type": "devops", "status": "TODO"},
-        {"id": "TICK-2", "type": "frontend", "status": "TODO"},
-        {"id": "TICK-3", "type": "backend", "status": "TODO"}
-    ]}
-    res = developer_agent(state)
-    assert res["dev_tickets"][0]["status"] == "TODO"
-    assert res["dev_tickets"][1]["status"] == "DONE"
-    assert res["dev_tickets"][2]["status"] == "DONE"
+    with patch.dict(os.environ, {"LLM_PROVIDER": "unknown"}, clear=True):
+        state = {"dev_tickets": [
+            {"id": "TICK-1", "type": "devops", "status": "TODO"},
+            {"id": "TICK-2", "type": "frontend", "status": "TODO"},
+            {"id": "TICK-3", "type": "backend", "status": "TODO"}
+        ]}
+        res = developer_agent(state)
+        assert res["dev_tickets"][0]["status"] == "TODO"
+        assert res["dev_tickets"][1]["status"] == "DONE"
+        assert res["dev_tickets"][2]["status"] == "DONE"
 
 def test_qa_agent():
     res = qa_agent({})

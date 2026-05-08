@@ -16,6 +16,10 @@ def test_is_llm_configured_github():
     with patch.dict(os.environ, {"LLM_PROVIDER": "github", "GITHUB_TOKEN": "test"}):
         assert is_llm_configured() is True
 
+def test_is_llm_configured_ollama():
+    with patch.dict(os.environ, {"LLM_PROVIDER": "ollama"}):
+        assert is_llm_configured() is True
+
 def test_is_llm_configured_unknown():
     with patch.dict(os.environ, {"LLM_PROVIDER": "unknown"}):
         assert is_llm_configured() is False
@@ -38,6 +42,13 @@ def test_get_llm_github():
         llm = get_llm()
         assert llm.__class__.__name__ == "ChatOpenAI"
         assert llm.openai_api_base == "https://models.inference.ai.azure.com"
+
+def test_get_llm_ollama():
+    with patch.dict(os.environ, {"LLM_PROVIDER": "ollama", "LLM_MODEL": "llama3.1", "OLLAMA_BASE_URL": "http://test:11434"}):
+        llm = get_llm()
+        assert llm.__class__.__name__ == "ChatOllama"
+        assert llm.model == "llama3.1"
+        assert llm.base_url == "http://test:11434"
 
 def test_get_llm_unknown_fallback():
     with patch.dict(os.environ, {"LLM_PROVIDER": "unknown", "OPENAI_API_KEY": "test"}):
