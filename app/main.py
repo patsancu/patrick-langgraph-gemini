@@ -4,11 +4,13 @@ import uuid
 import sqlite3
 import logging
 from dotenv import load_dotenv
+
+# Load env variables before importing our modules
+load_dotenv()
+
 from langgraph.checkpoint.sqlite import SqliteSaver
 from app.graph.workflow import builder
 from app.dependencies import get_ticket_store
-
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
