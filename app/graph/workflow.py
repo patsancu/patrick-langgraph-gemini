@@ -3,7 +3,7 @@ from langgraph.graph import StateGraph, START, END
 from app.graph.state import AppState
 from app.dependencies import get_ticket_store, get_version_control
 from langchain_core.messages import AIMessage
-from app.graph.llm_schemas import POExtraction, DevLeadExtraction
+from app.graph.llm_schemas import POSelection, DevLeadExtraction, DevOpsExtraction
 from app.llm import get_llm, is_llm_configured
 from app.config.prompts import PO_AGENT_PROMPT, DEV_LEAD_AGENT_PROMPT, DEVOPS_AGENT_PROMPT
 
@@ -11,31 +11,53 @@ logger = logging.getLogger(__name__)
 
 def po_agent(state: AppState) -> dict:
     store = get_ticket_store()
-    logger.info("--- PO Agent: Analyzing Ticket ---")
+    logger.info("--- PO Agent: Grooming Backlog ---")
 
-    ticket_desc = state.get("original_ticket_desc", "")
+    backlog_tickets = store.get_tickets_by_status("BACKLOG")
+    
+    if not backlog_tickets:
+        logger.info("No backlog tickets found.")
+        return {"use_case_tickets": [], "messages": [AIMessage(content="PO Agent: No backlog tickets to process.")]}
 
     if not is_llm_configured():
         logger.warning("LLM provider not configured. Using mock PO logic.")
-        uc1_id = store.create_ticket(title="Use Case 1: Core feature", description="Extracted from " + state.get("original_ticket_id", ""), ticket_type="use_case")
-        uc2_id = store.create_ticket(title="Use Case 2: UI setup", description="Extracted from " + state.get("original_ticket_id", ""), ticket_type="use_case")
-        return {"use_case_tickets": [uc1_id, uc2_id], "messages": [AIMessage(content="PO Agent created use cases (mock).")]}
+        import random
+        # Pick 20% or less, at least 1
+        num_to_pick = max(1, int(len(backlog_tickets) * 0.2))
+        selected = random.sample(backlog_tickets, min(num_to_pick, len(backlog_tickets)))
+        
+        selected_ids = []
+        for t in selected:
+            store.update_ticket_status(t['id'], "TODO")
+            store.add_comment(t['id'], "Selected for development by PO")
+            selected_ids.append(t['id'])
+            
+        return {"use_case_tickets": selected_ids, "messages": [AIMessage(content=f"PO Agent selected backlog tickets (mock): {', '.join(selected_ids)}")]}
 
-    llm = get_llm().with_structured_output(POExtraction)
+    llm = get_llm().with_structured_output(POSelection)
+    
+    ticket_list_str = "\n".join([f"- ID: {t['id']}, Title: {t['title']}, Desc: {t.get('description', '')}" for t in backlog_tickets])
 
     messages = [
         ("system", PO_AGENT_PROMPT),
-        ("human", f"User Request: {ticket_desc}")
+        ("human", f"Backlog Tickets:\n{ticket_list_str}")
     ]
 
-    result = llm.invoke(messages)
-    use_case_ids = []
-    
-    for uc in result.use_cases:
-        uc_id = store.create_ticket(title=uc.title, description=uc.description, ticket_type="use_case")
-        use_case_ids.append(uc_id)
+    try:
+        result = llm.invoke(messages)
+        selected_ids = result.selected_ticket_ids if result and result.selected_ticket_ids else []
+    except Exception as e:
+        logger.error(f"PO Agent LLM selection failed: {e}")
+        selected_ids = []
         
-    return {"use_case_tickets": use_case_ids, "messages": [AIMessage(content="PO Agent generated use cases via LLM.")]}
+    actual_selected = []
+    for t_id in selected_ids:
+        if any(bt['id'] == t_id for bt in backlog_tickets):
+            store.update_ticket_status(t_id, "TODO")
+            store.add_comment(t_id, "Selected for development by PO")
+            actual_selected.append(t_id)
+        
+    return {"use_case_tickets": actual_selected, "messages": [AIMessage(content=f"PO Agent selected backlog tickets via LLM: {', '.join(actual_selected)}")]}
 
 def dev_lead_agent(state: AppState) -> dict:
     store = get_ticket_store()

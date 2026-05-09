@@ -1,6 +1,6 @@
 import logging
 import requests
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from app.interfaces.ticket_store import ITicketStore
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class LinearTicketStore(ITicketStore):
         return response.json()
 
     def _get_state_id(self, target_type: str) -> Optional[str]:
-        # target_type maps to Linear's internal workflow state types: "unstarted", "started", "completed", "canceled"
+        # target_type maps to Linear's internal workflow state types: "backlog", "unstarted", "started", "completed", "canceled"
         if not self._states_cache:
             query = """
             query GetStates($teamId: String!) {
@@ -47,20 +47,31 @@ class LinearTicketStore(ITicketStore):
         
         return self._states_cache.get(target_type)
 
-    def create_ticket(self, title: str, description: str, ticket_type: str = "feature") -> str:
+    def create_ticket(self, title: str, description: str, ticket_type: str = "feature", status: str = "BACKLOG") -> str:
         query = """
-        mutation IssueCreate($teamId: String!, $title: String!, $description: String) {
-          issueCreate(input: {teamId: $teamId, title: $title, description: $description}) {
+        mutation IssueCreate($teamId: String!, $title: String!, $description: String, $stateId: String) {
+          issueCreate(input: {teamId: $teamId, title: $title, description: $description, stateId: $stateId}) {
             issue { id identifier title }
           }
         }
         """
+        
+        type_mapping = {
+            "BACKLOG": "backlog",
+            "TODO": "unstarted",
+            "IN PROGRESS": "started",
+            "DONE": "completed"
+        }
+        target_type = type_mapping.get(status.upper(), "backlog")
+        state_id = self._get_state_id(target_type)
+        
         # Linear doesn't have a native 'ticket type' without custom labels, so we'll prepend it to the description
         desc_with_type = f"**Task Type:** {ticket_type.upper()}\n\n{description}"
         variables = {
             "teamId": self.team_id,
             "title": title,
-            "description": desc_with_type
+            "description": desc_with_type,
+            "stateId": state_id
         }
         try:
             res = self._run_query(query, variables)
@@ -79,6 +90,7 @@ class LinearTicketStore(ITicketStore):
     def update_ticket_status(self, ticket_id: str, status: str) -> None:
         # Map our internal statuses to Linear's state types
         type_mapping = {
+            "BACKLOG": "backlog",
             "TODO": "unstarted",
             "IN PROGRESS": "started",
             "DONE": "completed"
@@ -114,22 +126,56 @@ class LinearTicketStore(ITicketStore):
             res = self._run_query(query, {"id": ticket_id})
             issue = res.get("data", {}).get("issue")
             if issue:
-                # Map Linear's state type back to our expected status format
                 state_type = issue.get("state", {}).get("type")
                 if state_type == "completed":
                     issue["status"] = "DONE"
                 elif state_type == "started":
                     issue["status"] = "IN PROGRESS"
+                elif state_type == "backlog":
+                    issue["status"] = "BACKLOG"
                 else:
                     issue["status"] = "TODO"
                     
-                # Standardize 'type' field to prevent KeyError in our workflow checks
-                issue["type"] = "feature" # Fallback if we can't parse it
+                issue["type"] = "feature" # Fallback
                 
             return issue
         except Exception as e:
             logger.error(f"[LinearTicketStore] Failed to get ticket: {e}")
             return None
+
+    def get_tickets_by_status(self, status: str) -> List[Dict[str, Any]]:
+        type_mapping = {
+            "BACKLOG": "backlog",
+            "TODO": "unstarted",
+            "IN PROGRESS": "started",
+            "DONE": "completed"
+        }
+        target_type = type_mapping.get(status.upper(), "backlog")
+        
+        query = """
+        query GetIssuesByState($teamId: String!) {
+          team(id: $teamId) {
+            issues {
+              nodes { id title description state { type } }
+            }
+          }
+        }
+        """
+        try:
+            res = self._run_query(query, {"teamId": self.team_id})
+            nodes = res.get("data", {}).get("team", {}).get("issues", {}).get("nodes", [])
+            
+            filtered_issues = []
+            for node in nodes:
+                if node.get("state", {}).get("type") == target_type:
+                    node["status"] = status.upper()
+                    node["type"] = "feature" # fallback type
+                    filtered_issues.append(node)
+                    
+            return filtered_issues
+        except Exception as e:
+            logger.error(f"[LinearTicketStore] Failed to get tickets by status: {e}")
+            return []
 
     def add_comment(self, ticket_id: str, comment: str) -> None:
         query = """

@@ -8,7 +8,7 @@ def test_mock_ticket_store():
 
     ticket = store.get_ticket(ticket_id)
     assert ticket["title"] == "Title"
-    assert ticket["status"] == "TODO"
+    assert ticket["status"] == "BACKLOG"
 
     store.update_ticket_status(ticket_id, "DONE")
     ticket = store.get_ticket(ticket_id)

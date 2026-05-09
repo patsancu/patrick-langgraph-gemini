@@ -1,5 +1,7 @@
-PO_AGENT_PROMPT = """You are the Product Owner for a new software project. 
-Analyze the following user request and break it down into distinct, logical 'Use Cases'."""
+PO_AGENT_PROMPT = """You are the Product Owner for the software project.
+Review the following list of BACKLOG tickets.
+Select the most important ones to move into the active sprint (TODO status).
+Return the exact IDs of the tickets you want to prioritize."""
 
 DEV_LEAD_AGENT_PROMPT = """You are the Dev Team Lead. You must read the following Use Cases and create specific development tasks to implement them.
 If this is a new feature that needs a full project setup, include a 'devops' task to scaffold the app.

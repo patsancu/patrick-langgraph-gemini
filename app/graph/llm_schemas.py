@@ -8,6 +8,9 @@ class UseCase(BaseModel):
 class POExtraction(BaseModel):
     use_cases: List[UseCase] = Field(description="A list of use cases extracted from the user's initial request")
 
+class POSelection(BaseModel):
+    selected_ticket_ids: List[str] = Field(description="A list of exact ticket IDs selected from the backlog to be prioritized.")
+
 class DevTask(BaseModel):
     title: str = Field(description="The title of the developer task")
     description: str = Field(description="Detailed technical requirements for this task")

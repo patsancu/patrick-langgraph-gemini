@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import logging
 
 logger = logging.getLogger(__name__)
 
 class ITicketStore(ABC):
     @abstractmethod
-    def create_ticket(self, title: str, description: str, ticket_type: str = "feature") -> str:
+    def create_ticket(self, title: str, description: str, ticket_type: str = "feature", status: str = "BACKLOG") -> str:
         pass
 
     @abstractmethod
@@ -15,6 +15,10 @@ class ITicketStore(ABC):
 
     @abstractmethod
     def get_ticket(self, ticket_id: str) -> Optional[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    def get_tickets_by_status(self, status: str) -> List[Dict[str, Any]]:
         pass
 
     @abstractmethod
@@ -26,7 +30,7 @@ class MockTicketStore(ITicketStore):
         self.tickets: Dict[str, Dict[str, Any]] = {}
         self.next_id = 1
 
-    def create_ticket(self, title: str, description: str, ticket_type: str = "feature") -> str:
+    def create_ticket(self, title: str, description: str, ticket_type: str = "feature", status: str = "BACKLOG") -> str:
         ticket_id = f"TICK-{self.next_id}"
         self.next_id += 1
         self.tickets[ticket_id] = {
@@ -34,10 +38,10 @@ class MockTicketStore(ITicketStore):
             "title": title,
             "description": description,
             "type": ticket_type,
-            "status": "TODO",
+            "status": status,
             "comments": []
         }
-        logger.info(f"[MockTicketStore] Created ticket {ticket_id}: {title}")
+        logger.info(f"[MockTicketStore] Created ticket {ticket_id} ({status}): {title}")
         return ticket_id
 
     def update_ticket_status(self, ticket_id: str, status: str) -> None:
@@ -49,6 +53,9 @@ class MockTicketStore(ITicketStore):
 
     def get_ticket(self, ticket_id: str) -> Optional[Dict[str, Any]]:
         return self.tickets.get(ticket_id)
+
+    def get_tickets_by_status(self, status: str) -> List[Dict[str, Any]]:
+        return [t for t in self.tickets.values() if t["status"] == status]
 
     def add_comment(self, ticket_id: str, comment: str) -> None:
         if ticket_id in self.tickets:
