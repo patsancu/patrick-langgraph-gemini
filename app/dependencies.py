@@ -15,7 +15,6 @@ linear_team_id = os.getenv("LINEAR_TEAM_ID")
 if linear_api_key and linear_team_id:
     ticket_store = LinearTicketStore(linear_api_key, linear_team_id)
 else:
-
     # Using singleton for mock to maintain state in memory during execution
     ticket_store = MockTicketStore()
 
